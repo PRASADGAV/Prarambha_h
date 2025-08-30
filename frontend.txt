@@ -1,0 +1,561 @@
+import React, { useMemo, useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Home,
+  Bell,
+  CalendarClock,
+  Users,
+  GraduationCap,
+  Search,
+  Sparkles,
+  Moon,
+  SunMedium,
+  TerminalSquare,
+  MessageCircle,
+  Megaphone,
+  Clock,
+  MapPin,
+  Mail,
+  Phone,
+  Link,
+  ExternalLink
+} from "lucide-react";
+
+/**
+ * SMART CAMPUS ASSISTANT – Single-file React app
+ * - Tailwind UI + Framer Motion animations
+ * - Crisp navbar, pages: Home, Notices, Timetable, Faculty, Events, Smart Search
+ * - Local demo data + instant filtering
+ * - Chat drawer with placeholder bot; easy drop-in for Dialogflow Messenger
+ * - Works great as a hackathon demo. Plug in Dialogflow in <DialogflowHint/> section.
+ */
+
+// ------- Demo Data (replace with your API/DB later) -------
+const DEMO_NOTICES = [
+  {
+    id: 1,
+    title: "Mid-Sem Timetable Released",
+    body: "Download the PDF from the exam cell portal.",
+    tag: "Exams",
+    date: "2025-09-01"
+  },
+  {
+    id: 2,
+    title: "AI Club Hackathon (6 hrs)",
+    body: "Form teams of 2–4. Use any Google product (Dialogflow, Firebase, Sheets).",
+    tag: "Events",
+    date: "2025-09-03"
+  },
+  {
+    id: 3,
+    title: "Library Hours Extended",
+    body: "Open till 10 PM during exam week.",
+    tag: "General",
+    date: "2025-09-05"
+  }
+];
+
+const DEMO_TIMETABLE = [
+  { day: "Mon", slot: "9:00–10:00", subject: "DSA", room: "C-204", faculty: "Dr. Shenoy" },
+  { day: "Mon", slot: "10:00–11:00", subject: "DBMS", room: "C-206", faculty: "Prof. Iqbal" },
+  { day: "Tue", slot: "9:00–11:00", subject: "OS Lab", room: "Lab-2", faculty: "Ms. Rai" },
+  { day: "Wed", slot: "11:00–12:00", subject: "AI", room: "A-101", faculty: "Dr. Menon" },
+  { day: "Thu", slot: "1:00–3:00", subject: "Mini Project", room: "MakerSpace", faculty: "Mentors" },
+  { day: "Fri", slot: "12:00–1:00", subject: "Maths", room: "B-304", faculty: "Dr. Patil" }
+];
+
+const DEMO_FACULTY = [
+  {
+    name: "Dr. Kavya Menon",
+    dept: "AI & DS",
+    email: "k.menon@campus.edu",
+    phone: "+91-9876543210",
+    room: "A-311",
+    avatar: "https://i.pravatar.cc/150?img=47"
+  },
+  {
+    name: "Prof. R. Iqbal",
+    dept: "Computer Science",
+    email: "r.iqbal@campus.edu",
+    phone: "+91-9123456780",
+    room: "C-206",
+    avatar: "https://i.pravatar.cc/150?img=12"
+  },
+  {
+    name: "Dr. Meera Shenoy",
+    dept: "Computer Science",
+    email: "m.shenoy@campus.edu",
+    phone: "+91-9988776655",
+    room: "C-204",
+    avatar: "https://i.pravatar.cc/150?img=32"
+  },
+  {
+    name: "Ms. Anvi Rai",
+    dept: "Information Technology",
+    email: "a.rai@campus.edu",
+    phone: "+91-9090909090",
+    room: "Lab-2",
+    avatar: "https://i.pravatar.cc/150?img=5"
+  }
+];
+
+const DEMO_EVENTS = [
+  {
+    name: "Prarambha – Mini Hackathon",
+    when: "Sat, 14 Sep · 10:00–16:00",
+    where: "Auditorium / Lab Block",
+    about: "Build a working project that solves a student-life problem. Use any Google product.",
+    link: "https://techfest.iitb.ac.in/"
+  },
+  {
+    name: "Resume Clinic",
+    when: "Wed, 18 Sep · 14:00–16:00",
+    where: "TPO Cell",
+    about: "Get your resume reviewed by seniors and alumni.",
+    link: "https://example.com/resume"
+  }
+];
+
+// ------- Utilities -------
+const cx = (...classes) => classes.filter(Boolean).join(" ");
+
+const Card = ({ className = "", children }) => (
+  <div className={cx("rounded-2xl bg-white/70 dark:bg-zinc-900/60 backdrop-blur shadow-lg border border-zinc-200/60 dark:border-zinc-800 p-5", className)}>
+    {children}
+  </div>
+);
+
+const Page = ({ children }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.25 }}
+    className="p-6 md:p-10"
+  >
+    {children}
+  </motion.div>
+);
+
+function useDarkMode() {
+  const [dark, setDark] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("dark") === "1";
+  });
+  useEffect(() => {
+    const root = document.documentElement;
+    if (dark) root.classList.add("dark");
+    else root.classList.remove("dark");
+    localStorage.setItem("dark", dark ? "1" : "0");
+  }, [dark]);
+  return { dark, setDark };
+}
+
+// ------- Pages -------
+function HomePage() {
+  return (
+    <Page>
+      <div className="mx-auto max-w-6xl">
+        <motion.h1 layout className="text-3xl md:text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-3">
+          Welcome to Campus <GraduationCap className="w-8 h-8" />
+        </motion.h1>
+        <p className="mt-4 text-zinc-600 dark:text-zinc-300 max-w-2xl">
+          Meet your AI‑Powered Smart Campus Assistant. Find timetables, notices, events, and faculty info instantly — and ask our chatbot anything! ✨
+        </p>
+        <div className="grid md:grid-cols-3 gap-6 mt-8">
+          <Card>
+            <div className="flex items-center gap-3"><Bell className="w-5 h-5"/><h3 className="font-semibold">Fresh Notices</h3></div>
+            <ul className="mt-3 space-y-2 text-sm">
+              {DEMO_NOTICES.slice(0,3).map(n => (
+                <li key={n.id} className="flex items-start gap-2">
+                  <Megaphone className="w-4 h-4 mt-0.5" />
+                  <div>
+                    <p className="font-medium">{n.title}</p>
+                    <p className="text-zinc-600 dark:text-zinc-400">{n.body}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Card>
+          <Card>
+            <div className="flex items-center gap-3"><CalendarClock className="w-5 h-5"/><h3 className="font-semibold">Today at a glance</h3></div>
+            <ul className="mt-3 text-sm space-y-2">
+              {DEMO_TIMETABLE.filter(t=>t.day!=="Sun").slice(0,3).map((t,i)=> (
+                <li key={i} className="flex items-center justify-between">
+                  <span className="font-medium">{t.subject}</span>
+                  <span className="text-zinc-600 dark:text-zinc-400">{t.slot} · {t.room}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+          <Card>
+            <div className="flex items-center gap-3"><Sparkles className="w-5 h-5"/><h3 className="font-semibold">Quick Tips</h3></div>
+            <ul className="mt-3 text-sm list-disc list-inside text-zinc-700 dark:text-zinc-300 space-y-1">
+              <li>Use <b>Smart Search</b> to ask questions in plain language.</li>
+              <li>Press <kbd className="px-1 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800">/</kbd> to search.</li>
+              <li>Dark mode friendly & mobile responsive.</li>
+            </ul>
+          </Card>
+        </div>
+      </div>
+    </Page>
+  );
+}
+
+function NoticesPage() {
+  const [q, setQ] = useState("");
+  const results = useMemo(() =>
+    DEMO_NOTICES.filter(n =>
+      (n.title + n.body + n.tag).toLowerCase().includes(q.toLowerCase())
+    ), [q]);
+  return (
+    <Page>
+      <div className="mx-auto max-w-5xl">
+        <Header title="Notices" subtitle="Latest updates from admin & departments" icon={<Bell className="w-6 h-6"/>} />
+        <SearchBar value={q} onChange={setQ} placeholder="Search notices, e.g., exam, scholarship…"/>
+        <div className="grid gap-4 mt-6">
+          {results.map(n => (
+            <motion.div key={n.id} initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 bg-white/70 dark:bg-zinc-900/60">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">{n.title}</h3>
+                <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">{n.tag}</span>
+              </div>
+              <p className="text-zinc-600 dark:text-zinc-300 mt-1">{n.body}</p>
+              <div className="text-xs text-zinc-500 mt-2">📅 {n.date}</div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </Page>
+  );
+}
+
+function TimetablePage() {
+  const [day, setDay] = useState("All");
+  const filtered = useMemo(() => day === "All" ? DEMO_TIMETABLE : DEMO_TIMETABLE.filter(t => t.day === day), [day]);
+  const days = ["All", ...Array.from(new Set(DEMO_TIMETABLE.map(t=>t.day)))];
+  return (
+    <Page>
+      <div className="mx-auto max-w-5xl">
+        <Header title="Timetable" subtitle="Plan your day with clarity" icon={<CalendarClock className="w-6 h-6"/>}/>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {days.map(d => (
+            <button key={d} onClick={()=>setDay(d)} className={cx("px-3 py-1.5 rounded-full text-sm border", d===day?"bg-blue-600 text-white border-blue-600":"border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800")}>{d}</button>
+          ))}
+        </div>
+        <Card className="mt-5 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="text-left text-zinc-500">
+                <th className="py-2">Day</th>
+                <th className="py-2">Time</th>
+                <th className="py-2">Subject</th>
+                <th className="py-2">Room</th>
+                <th className="py-2">Faculty</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((t,i)=> (
+                <tr key={i} className="border-t border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40">
+                  <td className="py-2">{t.day}</td>
+                  <td className="py-2">{t.slot}</td>
+                  <td className="py-2 font-medium">{t.subject}</td>
+                  <td className="py-2">{t.room}</td>
+                  <td className="py-2">{t.faculty}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      </div>
+    </Page>
+  );
+}
+
+function FacultyPage() {
+  const [q, setQ] = useState("");
+  const results = useMemo(()=>
+    DEMO_FACULTY.filter(f=>
+      (f.name+f.dept+f.email+f.room).toLowerCase().includes(q.toLowerCase())
+    ),[q]
+  );
+  return (
+    <Page>
+      <div className="mx-auto max-w-6xl">
+        <Header title="Faculty" subtitle="Find mentors and contacts" icon={<Users className="w-6 h-6"/>}/>
+        <SearchBar value={q} onChange={setQ} placeholder="Search by name, dept, room…"/>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+          {results.map((f,i)=> (
+            <motion.div key={i} initial={{opacity:0, y:8}} animate={{opacity:1, y:0}} transition={{delay:i*0.03}} className="rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden bg-white/60 dark:bg-zinc-900/60">
+              <div className="p-4 flex items-center gap-4">
+                <img alt={f.name} src={f.avatar} className="w-16 h-16 rounded-2xl object-cover"/>
+                <div>
+                  <h3 className="font-semibold">{f.name}</h3>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">{f.dept}</p>
+                  <div className="mt-2 text-xs flex flex-wrap gap-x-4 gap-y-1 text-zinc-500">
+                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3"/>{f.room}</span>
+                    <span className="flex items-center gap-1"><Mail className="w-3 h-3"/>{f.email}</span>
+                    <span className="flex items-center gap-1"><Phone className="w-3 h-3"/>{f.phone}</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </Page>
+  );
+}
+
+function EventsPage() {
+  return (
+    <Page>
+      <div className="mx-auto max-w-4xl">
+        <Header title="Events" subtitle="What’s happening on campus" icon={<CalendarClock className="w-6 h-6"/>}/>
+        <div className="mt-6 space-y-5">
+          {DEMO_EVENTS.map((e,i)=> (
+            <motion.div key={i} initial={{opacity:0, x:-8}} animate={{opacity:1, x:0}} className="flex gap-4 items-start">
+              <div className="w-2 rounded-full bg-gradient-to-b from-blue-500 to-cyan-400 h-16 mt-1"/>
+              <Card className="flex-1">
+                <h3 className="text-lg font-semibold flex items-center gap-2">{e.name} <a href={e.link} target="_blank" className="text-sm inline-flex items-center gap-1 underline decoration-dotted"><ExternalLink className="w-4 h-4"/>Details</a></h3>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1 flex items-center gap-3"><Clock className="w-4 h-4"/>{e.when} <MapPin className="w-4 h-4"/>{e.where}</p>
+                <p className="mt-2 text-zinc-700 dark:text-zinc-300">{e.about}</p>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </Page>
+  );
+}
+
+function SmartSearchPage({ openChat, setOpenChat }) {
+  const [q, setQ] = useState("");
+  const localResults = useMemo(()=>{
+    const bank = [
+      ...DEMO_NOTICES.map(n=>({type:"Notice", title:n.title, detail:n.body})),
+      ...DEMO_TIMETABLE.map(t=>({type:"Timetable", title:`${t.subject} (${t.day} ${t.slot})`, detail:`Room ${t.room} · ${t.faculty}`})),
+      ...DEMO_FACULTY.map(f=>({type:"Faculty", title:f.name, detail:`${f.dept} · Room ${f.room}`})),
+      ...DEMO_EVENTS.map(e=>({type:"Event", title:e.name, detail:e.when}))
+    ];
+    return bank.filter(x => (x.title+x.detail+x.type).toLowerCase().includes(q.toLowerCase()));
+  },[q]);
+
+  return (
+    <Page>
+      <div className="mx-auto max-w-4xl">
+        <Header title="Smart Search" subtitle="Ask anything about your campus" icon={<Search className="w-6 h-6"/>}/>
+        <div className="mt-4 flex items-center gap-3">
+          <div className="flex-1">
+            <SearchBar value={q} onChange={setQ} autoFocus placeholder="Try: ‘Where is OS Lab?’ or ‘Menon email’…"/>
+          </div>
+          <button onClick={()=>setOpenChat(true)} className="rounded-xl border px-4 py-2 text-sm bg-emerald-600 text-white shadow hover:shadow-lg active:scale-95">Open Chatbot</button>
+        </div>
+
+        <div className="mt-6 grid gap-3">
+          {q && localResults.map((r,i)=> (
+            <motion.div key={i} initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} className="flex items-start gap-3 rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 bg-white/70 dark:bg-zinc-900/60">
+              <span className="text-xs px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800">{r.type}</span>
+              <div>
+                <div className="font-medium">{r.title}</div>
+                <div className="text-sm text-zinc-600 dark:text-zinc-400">{r.detail}</div>
+              </div>
+            </motion.div>
+          ))}
+          {!q && <DialogflowHint/>}
+        </div>
+      </div>
+    </Page>
+  );
+}
+
+function DialogflowHint() {
+  return (
+    <Card className="mt-4">
+      <div className="flex items-start gap-3">
+        <TerminalSquare className="w-6 h-6"/>
+        <div>
+          <h3 className="font-semibold">Plug in Dialogflow / Vertex AI Agent</h3>
+          <ol className="mt-2 text-sm text-zinc-700 dark:text-zinc-300 list-decimal list-inside space-y-1">
+            <li>In <b>index.html</b>, add Dialogflow Messenger script:
+              <pre className="mt-2 p-3 bg-zinc-950 text-zinc-100 rounded-xl overflow-x-auto text-xs">{`<script src="https://www.gstatic.com/dialogflow-console/fast/messenger/bootstrap.js?v=1"></script>
+<!-- Then place the widget (customize IDs) -->
+<df-messenger
+  chat-title="Smart Campus Assistant"
+  agent-id="YOUR-AGENT-ID"
+  language-code="en"
+></df-messenger>`}</pre>
+            </li>
+            <li>Or embed your own chat UI and send queries through your <b>Node.js</b> backend to Dialogflow ES/CX or Vertex AI.</li>
+            <li>For Firebase Hosting, just deploy this React app and your <b>df-messenger</b> will work instantly.</li>
+          </ol>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ------- Layout / Shell -------
+function Header({ title, subtitle, icon }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="p-2 rounded-2xl bg-blue-600 text-white shadow">{icon}</div>
+      <div>
+        <h2 className="text-2xl md:text-3xl font-bold">{title}</h2>
+        <p className="text-zinc-600 dark:text-zinc-400">{subtitle}</p>
+      </div>
+    </div>
+  );
+}
+
+function SearchBar({ value, onChange, placeholder, autoFocus }) {
+  return (
+    <div className="relative">
+      <input
+        autoFocus={autoFocus}
+        value={value}
+        onChange={(e)=>onChange(e.target.value)}
+        placeholder={placeholder||"Search…"}
+        className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900/60 px-4 py-2 pl-9 outline-none focus:ring-2 ring-blue-500"
+      />
+      <Search className="w-4 h-4 absolute left-3 top-2.5 text-zinc-500"/>
+    </div>
+  );
+}
+
+function ChatDrawer({ open, onClose }) {
+  const [messages, setMessages] = useState([
+    { role: "bot", text: "Hi! I’m your Smart Campus Assistant. Ask me about timetables, notices, events, or faculty." }
+  ]);
+  const [text, setText] = useState("");
+  const scrollRef = useRef(null);
+
+  useEffect(()=>{
+    if(scrollRef.current){
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  },[messages, open]);
+
+  function handleSend() {
+    const q = text.trim();
+    if(!q) return;
+    setMessages(prev => [...prev, { role: "user", text: q }]);
+    setText("");
+    // Simple local demo answer from our data
+    const bank = [
+      ...DEMO_NOTICES.map(n=>({ans:`Notice: ${n.title} — ${n.body}`})),
+      ...DEMO_TIMETABLE.map(t=>({ans:`${t.subject} on ${t.day} ${t.slot} at ${t.room} by ${t.faculty}`})),
+      ...DEMO_FACULTY.map(f=>({ans:`${f.name} (${f.dept}) · ${f.email} · ${f.phone} · ${f.room}`})),
+      ...DEMO_EVENTS.map(e=>({ans:`Event: ${e.name} on ${e.when} at ${e.where}`}))
+    ];
+    const match = bank.find(b=> (b.ans.toLowerCase().includes(q.toLowerCase())));
+    const fallback = "I’ll fetch that once Dialogflow is connected. Meanwhile try: ‘OS Lab timing’, ‘Menon email’, ‘Hackathon’.";
+    setTimeout(()=>{
+      setMessages(prev => [...prev, { role: "bot", text: match? match.ans : fallback }]);
+    }, 400);
+  }
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.aside initial={{x: 400, opacity: 0}} animate={{x:0, opacity:1}} exit={{x: 400, opacity:0}} transition={{ type: "spring", stiffness: 220, damping: 24 }} className="fixed inset-y-0 right-0 w-full sm:w-[420px] bg-white dark:bg-zinc-950 border-l border-zinc-200 dark:border-zinc-800 shadow-2xl z-50 flex flex-col">
+          <div className="p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800">
+            <div className="flex items-center gap-2"><MessageCircle className="w-5 h-5"/><b>Smart Campus Chat</b></div>
+            <button onClick={onClose} className="px-3 py-1 rounded-lg text-sm bg-zinc-100 dark:bg-zinc-800">Close</button>
+          </div>
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+            {messages.map((m,i)=> (
+              <div key={i} className={cx("max-w-[85%] rounded-2xl px-3 py-2", m.role==='bot'?"bg-zinc-100 dark:bg-zinc-800":"bg-blue-600 text-white ml-auto")}>{m.text}</div>
+            ))}
+            <div className="text-[11px] text-zinc-500">Tip: Replace this drawer with <code>df-messenger</code> for your real agent.</div>
+          </div>
+          <div className="p-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-2">
+            <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={(e)=> e.key==='Enter' && handleSend()} placeholder="Type a message…" className="flex-1 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900/60 px-3 py-2 outline-none"/>
+            <button onClick={handleSend} className="px-3 py-2 rounded-xl bg-blue-600 text-white">Send</button>
+          </div>
+        </motion.aside>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ------- App -------
+export default function App() {
+  const [route, setRoute] = useState("home");
+  const [openChat, setOpenChat] = useState(false);
+  const { dark, setDark } = useDarkMode();
+
+  const tabs = [
+    { key: "home", label: "Home", icon: <Home className="w-4 h-4"/> },
+    { key: "notices", label: "Notices", icon: <Bell className="w-4 h-4"/> },
+    { key: "timetable", label: "Timetable", icon: <CalendarClock className="w-4 h-4"/> },
+    { key: "faculty", label: "Faculty", icon: <Users className="w-4 h-4"/> },
+    { key: "events", label: "Events", icon: <CalendarClock className="w-4 h-4"/> },
+    { key: "smart", label: "Smart Search", icon: <Search className="w-4 h-4"/> },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900 text-zinc-900 dark:text-zinc-100">
+      {/* Top Nav */}
+      <div className="sticky top-0 z-40 backdrop-blur bg-blue-600/90 text-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between h-14">
+            <div className="flex items-center gap-2 font-bold tracking-tight">
+              <GraduationCap className="w-5 h-5"/>
+              <span>Smart Campus Assistant</span>
+            </div>
+            <div className="hidden md:flex items-center gap-1">
+              {tabs.map(t => (
+                <button key={t.key} onClick={()=>setRoute(t.key)} className={cx("px-3 py-1.5 rounded-xl text-sm inline-flex items-center gap-2 transition", route===t.key?"bg-white/20 shadow": "hover:bg-white/10")}>{t.icon}{t.label}</button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={()=>setOpenChat(true)} className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-sm inline-flex items-center gap-2"><MessageCircle className="w-4 h-4"/>Chat</button>
+              <button onClick={()=>setDark(!dark)} className="p-2 rounded-xl bg-white/20 hover:bg-white/30">
+                {dark? <SunMedium className="w-4 h-4"/> : <Moon className="w-4 h-4"/>}
+              </button>
+            </div>
+          </div>
+        </div>
+        {/* Mobile tabs */}
+        <div className="md:hidden px-3 pb-2 flex gap-2 overflow-x-auto">
+          {tabs.map(t => (
+            <button key={t.key} onClick={()=>setRoute(t.key)} className={cx("px-3 py-1.5 rounded-xl text-sm whitespace-nowrap", route===t.key?"bg-white/90 text-blue-700": "bg-white/20")}>{t.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Pages */}
+      <main className="max-w-7xl mx-auto">
+        <AnimatePresence mode="wait">
+          {route === "home" && <HomePage key="home"/>}
+          {route === "notices" && <NoticesPage key="notices"/>}
+          {route === "timetable" && <TimetablePage key="timetable"/>}
+          {route === "faculty" && <FacultyPage key="faculty"/>}
+          {route === "events" && <EventsPage key="events"/>}
+          {route === "smart" && <SmartSearchPage key="smart" openChat={openChat} setOpenChat={setOpenChat}/>}        
+        </AnimatePresence>
+      </main>
+
+      {/* Floating CTA */}
+      <motion.button
+        onClick={()=>setOpenChat(true)}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="fixed bottom-5 right-5 rounded-full shadow-2xl bg-blue-600 text-white p-4"
+        aria-label="Open chat"
+      >
+        <Sparkles className="w-5 h-5"/>
+      </motion.button>
+
+      {/* Chat Drawer */}
+      <ChatDrawer open={openChat} onClose={()=>setOpenChat(false)} />
+
+      {/* Footer */}
+      <footer className="py-10 text-center text-sm text-zinc-500">
+        <p>Built with ❤️ for hackathons · React + Tailwind + Framer Motion</p>
+        <p className="mt-1">Drop-in support for Dialogflow / Vertex AI Agent</p>
+      </footer>
+    </div>
+  );
+}
